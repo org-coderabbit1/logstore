@@ -1,0 +1,72 @@
+package index
+
+import (
+	"context"
+	"fmt"
+
+	"example.com/acme/kit/tenant"
+	"go.etcd.io/bbolt"
+
+	shipper_index "example.com/acme/logstore/pkg/storage/stores/indexshipper/index"
+	"example.com/acme/logstore/pkg/storage/stores/series/index"
+	"example.com/acme/logstore/pkg/storage/stores/shipper/index/indexfile"
+	"example.com/acme/logstore/pkg/storage/stores/shipper/util"
+)
+
+type Writer interface {
+	ForEach(ctx context.Context, tableName string, callback func(boltdb *bbolt.DB) error) error
+}
+
+type Querier interface {
+	QueryPages(ctx context.Context, queries []index.Query, callback index.QueryPagesCallback) error
+}
+
+type querier struct {
+	writer       Writer
+	indexShipper Shipper
+}
+
+func NewQuerier(writer Writer, indexShipper Shipper) Querier {
+	return &querier{
+		writer:       writer,
+		indexShipper: indexShipper,
+	}
+}
+
+// QueryPages queries both the writer and indexShipper for the given queries.
+func (q *querier) QueryPages(ctx context.Context, queries []index.Query, callback index.QueryPagesCallback) error {
+	userID, err := tenant.TenantID(ctx)
+	if err != nil {
+		return err
+	}
+
+	userIDBytes := util.GetUnsafeBytes(userID)
+	queriesByTable := util.QueriesByTable(queries)
+	for table, queries := range queriesByTable {
+		err := util.DoParallelQueries(ctx, func(ctx context.Context, queries []index.Query, callback index.QueryPagesCallback) error {
+			// writer could be nil when running in ReadOnly mode
+			if q.writer != nil {
+				err := q.writer.ForEach(ctx, table, func(boltdb *bbolt.DB) error {
+					return indexfile.QueryBoltDB(ctx, boltdb, userIDBytes, queries, callback)
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+			return q.indexShipper.ForEach(ctx, table, userID, func(_ bool, idx shipper_index.Index) error {
+				boltdbIndexFile, ok := idx.(*indexfile.IndexFile)
+				if !ok {
+					return fmt.Errorf("unexpected index type %T", idx)
+				}
+
+				return indexfile.QueryBoltDB(ctx, boltdbIndexFile.GetBoltDB(), userIDBytes, queries, callback)
+			})
+		}, queries, callback)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

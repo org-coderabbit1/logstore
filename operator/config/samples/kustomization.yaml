@@ -1,0 +1,7 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- logstore_v1beta1_alertingrule.yaml
+- logstore_v1beta1_recordingrule.yaml
+- logstore_v1beta1_rulerconfig.yaml
+- logstore_v1_logstorestack.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

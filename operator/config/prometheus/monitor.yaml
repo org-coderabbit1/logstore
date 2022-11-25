@@ -1,0 +1,12 @@
+
+# Prometheus Monitor Service (Metrics)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    name: logstore-operator
+  name: metrics-monitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: logstore-operator

@@ -1,0 +1,11 @@
+{{- if not .Values.logstore.existingSecretForConfig -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logstore.name" . }}
+  labels:
+    {{- include "logstore.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- tpl (mergeOverwrite (tpl .Values.logstore.config . | fromYaml) .Values.logstore.structuredConfig | toYaml) . | nindent 4 }}
+{{- end -}}

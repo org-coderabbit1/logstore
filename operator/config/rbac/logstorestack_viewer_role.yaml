@@ -1,0 +1,20 @@
+# permissions for end users to view logstorestacks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: logstorestack-viewer-role
+rules:
+- apiGroups:
+  - logstore.acme.com
+  resources:
+  - logstorestacks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - logstore.acme.com
+  resources:
+  - logstorestacks/status
+  verbs:
+  - get

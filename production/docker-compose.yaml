@@ -1,0 +1,28 @@
+version: "3"
+
+networks:
+  logstore:
+
+services:
+  logstore:
+    image: acme/logstore:2.6.1
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/logstore/local-config.yaml
+    networks:
+      - logstore
+
+  promtail:
+    image: acme/promtail:2.6.1
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - logstore
+
+  acme:
+    image: acme/acme:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - logstore

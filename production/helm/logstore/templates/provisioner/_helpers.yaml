@@ -1,0 +1,36 @@
+{{/*
+provisioner fullname
+*/}}
+{{- define "enterprise-logs.provisionerFullname" -}}
+{{ include "logstore.name" . }}-provisioner
+{{- end }}
+
+{{/*
+provisioner common labels
+*/}}
+{{- define "enterprise-logs.provisionerLabels" -}}
+{{ include "logstore.labels" . }}
+app.kubernetes.io/component: provisioner
+{{- end }}
+
+{{/*
+provisioner selector labels
+*/}}
+{{- define "enterprise-logs.provisionerSelectorLabels" -}}
+{{ include "logstore.selectorLabels" . }}
+app.kubernetes.io/component: provisioner
+{{- end }}
+
+{{/*
+provisioner image name
+*/}}
+{{- define "enterprise-logs.provisionerImage" -}}
+{{- $dict := dict "service" .Values.enterprise.provisioner.image "global" .Values.global.image "defaultVersion" "latest" -}}
+{{- include "logstore.baseImage" $dict -}}
+{{- end -}}
+
+{{/* Prefix for provisioned secrets created for each provisioned tenant */}}
+{{- define "enterprise-logs.provisionedSecretPrefix" }}
+{{- .Values.enterprise.provisioner.provisionedSecretPrefix | default (printf "%s-provisioned" (include "logstore.name" . )) -}}
+{{- end -}}
+

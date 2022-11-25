@@ -1,0 +1,11 @@
+(import 'dashboards.libsonnet') +
+(import 'alerts.libsonnet') +
+(import 'recording_rules.libsonnet') + {
+  acmeDashboardFolder: 'Logstore SSD',
+
+  _config+:: {
+    ssd+: {
+      enabled: true,
+    },
+  },
+}

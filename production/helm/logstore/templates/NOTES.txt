@@ -1,0 +1,22 @@
+***********************************************************************
+ Welcome to Acme Logstore
+ Chart version: {{ .Chart.Version }}
+ Logstore version: {{ .Chart.AppVersion }}
+***********************************************************************
+
+Installed components:
+{{- if .Values.monitoring.selfMonitoring.enabled }}
+* acme-agent-operator
+{{- end }}
+{{- if eq (include "logstore.deployment.isSingleBinary" .) "true" }}
+* logstore 
+{{- else -}}
+{{- if .Values.gateway.enabled }}
+* gateway
+{{- end }}
+{{- if .Values.minio.enabled }}
+* minio 
+{{- end }}
+* read
+* write
+{{- end }}

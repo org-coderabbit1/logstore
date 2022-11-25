@@ -1,0 +1,14 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/logstore-distributed",
+    "namespace": "environments/logstore-distributed/main.jsonnet"
+  },
+  "spec": {
+    "apiServer": "https://0.0.0.0:38655",
+    "namespace": "k3d-logstore-distributed",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

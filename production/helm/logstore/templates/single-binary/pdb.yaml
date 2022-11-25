@@ -1,0 +1,16 @@
+{{- $isSingleBinary := eq (include "logstore.deployment.isSingleBinary" .) "true" -}}
+{{- if and .Values.podDisruptionBudget $isSingleBinary -}}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "logstore.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "logstore.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.singleBinarySelectorLabels" . | nindent 6 }}
+{{ toYaml .Values.podDisruptionBudget | indent 2 }}
+{{- end }}

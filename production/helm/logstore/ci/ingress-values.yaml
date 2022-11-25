@@ -1,0 +1,23 @@
+---
+gateway:
+  ingress:
+    enabled: true
+    annotations: {}
+    hosts:
+      - host: gateway.logstore.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+logstore:
+  commonConfig:
+    replication_factor: 1
+read:
+  replicas: 1
+write:
+  replicas: 1
+monitoring:
+  selfMonitoring:
+    logstoreCanary:
+      enabled: false
+test:
+  enabled: false

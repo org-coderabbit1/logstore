@@ -1,0 +1,6 @@
+git-repo: helm-charts
+key: Acme Logstore
+owner: acme
+sign: true
+skip-existing: true
+release-name-template: "helm-{{ .Name }}-{{ .Version }}"

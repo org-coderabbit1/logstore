@@ -1,0 +1,545 @@
+package gateway
+
+import (
+	"testing"
+
+	logstorev1 "example.com/acme/logstore/operator/apis/logstore/v1"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+func TestValidateModes_StaticMode(t *testing.T) {
+	type test struct {
+		name    string
+		wantErr string
+		stack   logstorev1.LogstoreStack
+	}
+	table := []test{
+		{
+			name:    "missing authentication spec",
+			wantErr: "mandatory configuration - missing tenants' authentication configuration",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "static",
+					},
+				},
+			},
+		},
+		{
+			name:    "missing roles spec",
+			wantErr: "mandatory configuration - missing roles configuration",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "static",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							Roles: nil,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "missing role bindings spec",
+			wantErr: "mandatory configuration - missing role bindings configuration",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "static",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							Roles: []logstorev1.RoleSpec{
+								{
+									Name:        "some-name",
+									Resources:   []string{"test"},
+									Tenants:     []string{"test"},
+									Permissions: []logstorev1.PermissionType{"read"},
+								},
+							},
+							RoleBindings: nil,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "incompatible OPA URL provided",
+			wantErr: "incompatible configuration - OPA URL not required for mode static",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "static",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: &logstorev1.OPASpec{
+								URL: "some-url",
+							},
+							Roles: []logstorev1.RoleSpec{
+								{
+									Name:        "some-name",
+									Resources:   []string{"test"},
+									Tenants:     []string{"test"},
+									Permissions: []logstorev1.PermissionType{"read"},
+								},
+							},
+							RoleBindings: []logstorev1.RoleBindingsSpec{
+								{
+									Name: "some-name",
+									Subjects: []logstorev1.Subject{
+										{
+											Name: "sub-1",
+											Kind: "user",
+										},
+									},
+									Roles: []string{"some-role"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "all set",
+			wantErr: "",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "static",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							Roles: []logstorev1.RoleSpec{
+								{
+									Name:        "some-name",
+									Resources:   []string{"test"},
+									Tenants:     []string{"test"},
+									Permissions: []logstorev1.PermissionType{"read"},
+								},
+							},
+							RoleBindings: []logstorev1.RoleBindingsSpec{
+								{
+									Name: "some-name",
+									Subjects: []logstorev1.Subject{
+										{
+											Name: "sub-1",
+											Kind: "user",
+										},
+									},
+									Roles: []string{"some-role"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tst := range table {
+		tst := tst
+		t.Run(tst.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateModes(tst.stack)
+			if tst.wantErr != "" {
+				require.EqualError(t, err, tst.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateModes_DynamicMode(t *testing.T) {
+	type test struct {
+		name    string
+		wantErr string
+		stack   logstorev1.LogstoreStack
+	}
+	table := []test{
+		{
+			name:    "missing authentication spec",
+			wantErr: "mandatory configuration - missing tenants configuration",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "dynamic",
+					},
+				},
+			},
+		},
+		{
+			name:    "missing OPA URL spec",
+			wantErr: "mandatory configuration - missing OPA Url",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "dynamic",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: nil,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "incompatible roles configuration provided",
+			wantErr: "incompatible configuration - static roles not required for mode dynamic",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "dynamic",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: &logstorev1.OPASpec{
+								URL: "some-url",
+							},
+							Roles: []logstorev1.RoleSpec{
+								{
+									Name:        "some-name",
+									Resources:   []string{"test"},
+									Tenants:     []string{"test"},
+									Permissions: []logstorev1.PermissionType{"read"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "incompatible roleBindings configuration provided",
+			wantErr: "incompatible configuration - static roleBindings not required for mode dynamic",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "dynamic",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: &logstorev1.OPASpec{
+								URL: "some-url",
+							},
+							RoleBindings: []logstorev1.RoleBindingsSpec{
+								{
+									Name: "some-name",
+									Subjects: []logstorev1.Subject{
+										{
+											Name: "sub-1",
+											Kind: "user",
+										},
+									},
+									Roles: []string{"some-role"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "all set",
+			wantErr: "",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "dynamic",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: &logstorev1.OPASpec{
+								URL: "some-url",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tst := range table {
+		tst := tst
+		t.Run(tst.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateModes(tst.stack)
+			if tst.wantErr != "" {
+				require.EqualError(t, err, tst.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateModes_OpenshiftLoggingMode(t *testing.T) {
+	type test struct {
+		name    string
+		wantErr string
+		stack   logstorev1.LogstoreStack
+	}
+	table := []test{
+		{
+			name:    "incompatible authentication spec provided",
+			wantErr: "incompatible configuration - custom tenants configuration not required",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "openshift-logging",
+						Authentication: []logstorev1.AuthenticationSpec{
+							{
+								TenantName: "test",
+								TenantID:   "1234",
+								OIDC: &logstorev1.OIDCSpec{
+									IssuerURL:     "some-url",
+									RedirectURL:   "some-other-url",
+									GroupClaim:    "test",
+									UsernameClaim: "test",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "incompatible authorization spec provided",
+			wantErr: "incompatible configuration - custom tenants configuration not required",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode:           "openshift-logging",
+						Authentication: nil,
+						Authorization: &logstorev1.AuthorizationSpec{
+							OPA: &logstorev1.OPASpec{
+								URL: "some-url",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "all set",
+			wantErr: "",
+			stack: logstorev1.LogstoreStack{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogstoreStack",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-stack",
+					Namespace: "some-ns",
+					UID:       "b23f9a38-9672-499f-8c29-15ede74d3ece",
+				},
+				Spec: logstorev1.LogstoreStackSpec{
+					Size: logstorev1.SizeOneXExtraSmall,
+					Tenants: &logstorev1.TenantsSpec{
+						Mode: "openshift-logging",
+					},
+				},
+			},
+		},
+	}
+	for _, tst := range table {
+		tst := tst
+		t.Run(tst.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateModes(tst.stack)
+			if tst.wantErr != "" {
+				require.EqualError(t, err, tst.wantErr)
+			}
+		})
+	}
+}
