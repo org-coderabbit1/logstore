@@ -1,0 +1,15 @@
+{{- if and .Values.gateway.enabled }}
+{{- if gt (int .Values.gateway.replicas) 1 }}
+apiVersion: {{ include "logstore.podDisruptionBudget.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.gatewayFullname" . }}
+  labels:
+    {{- include "logstore.gatewayLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.gatewaySelectorLabels" . | nindent 6 }}
+  maxUnavailable: 1
+{{- end }}
+{{- end }}

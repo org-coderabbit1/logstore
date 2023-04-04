@@ -1,0 +1,20 @@
+apiVersion: config.logstore.acme.com/v1
+kind: ProjectConfig
+health:
+  healthProbeBindAddress: :8081
+metrics:
+  bindAddress: 127.0.0.1:8080
+webhook:
+  port: 9443
+leaderElection:
+  leaderElect: false
+  resourceName: e3716011.acme.com
+featureGates:
+  logstoreStackGateway: true
+  runtimeSeccompProfile: false
+  #
+  # Webhook feature gates
+  #
+  logstoreStackWebhook: true
+  alertingRuleWebhook: true
+  recordingRuleWebhook: true

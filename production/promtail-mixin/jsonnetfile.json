@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/jsonnet-libs.git",
+          "subdir": "acme-builder"
+        }
+      },
+      "version": "master"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/jsonnet-libs.git",
+          "subdir": "mixin-utils"
+        }
+      },
+      "version": "master"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/logstore.git",
+          "subdir": "production/logstore-mixin"
+        }
+      },
+      "version": "main"
+    }
+  ],
+  "legacyImports": true
+}

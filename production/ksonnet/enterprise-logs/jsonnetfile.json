@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/logstore.git",
+          "subdir": "production/ksonnet/logstore"
+        }
+      },
+      "version": "main"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/jsonnet-libs",
+          "subdir": "ksonnet-util"
+        }
+      },
+      "version": "master"
+    }
+  ],
+  "legacyImports": true
+}

@@ -1,0 +1,25 @@
+schema_config:
+  configs:
+    - from: 2020-05-15
+      store: boltdb-shipper
+      object_store: bos
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /logstore/index
+    cache_location: /logstore/index_cache
+    shared_store: bos
+
+  bos:
+    bucket_name: bucket_name_1
+    endpoint: bj.bcebos.com
+    access_key_id: access_key_id
+    secret_access_key: secret_access_key
+
+compactor:
+  working_directory: /tmp/logstore/compactor
+  shared_store: bos

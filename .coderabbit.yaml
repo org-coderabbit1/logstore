@@ -1,0 +1,12 @@
+reviews:
+  review_details: true
+  auto_review:
+    base_branches:
+      - ".*"
+knowledge_base:
+  automatic_linking_mode: disabled
+  linked_repositories:
+    - repository: "org-coderabbit1/kit"
+      instructions: "Sibling service in the same estate."
+    - repository: "org-coderabbit1/tracestore"
+      instructions: "Sibling service in the same estate."

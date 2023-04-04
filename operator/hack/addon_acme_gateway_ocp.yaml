@@ -1,0 +1,328 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.acme: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"acme"}}'
+  name: acme
+  namespace: openshift-logging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: logging-logs-reader
+rules:
+- apiGroups:
+  - logstore.acme.com
+  resourceNames:
+  - logs
+  resources:
+  - application
+  - infrastructure
+  - audit
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: logging-acme-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: acme
+  namespace: openshift-logging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: logging-acme-logs-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: logging-logs-reader
+subjects:
+- kind: ServiceAccount
+  name: acme
+  namespace: openshift-logging
+---
+apiVersion: v1
+data:
+  config.ini: |
+    [analytics]
+    check_for_updates = false
+    reporting_enabled = false
+    [auth]
+    disable_login_form = true
+    disable_signout_menu = true
+    [auth.basic]
+    enabled = false
+    [auth.proxy]
+    auto_sign_up = true
+    enabled = true
+    header_name = X-Forwarded-User
+    [security]
+    admin_user = system:does-not-exist
+    cookie_secure = true
+    [users]
+    viewers_can_edit = true
+    default_theme = light
+    [log]
+    mode = console
+kind: ConfigMap
+metadata:
+  name: acme-config
+  namespace: openshift-logging
+---
+apiVersion: v1
+data:
+  logstore.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Logstore (Application)
+        isDefault: true
+        type: logstore
+        access: proxy
+        url: https://${GATEWAY_ADDRESS}/api/logs/v1/application/
+        jsonData:
+          tlsAuthWithCACert: true
+          httpHeaderName1: Authorization
+        secureJsonData:
+          tlsCACert: ${GATEWAY_SERVICE_CA}
+          httpHeaderValue1: Bearer ${GATEWAY_BEARER_TOKEN}
+      - name: Logstore (Infrastructure)
+        type: logstore
+        access: proxy
+        url: https://${GATEWAY_ADDRESS}/api/logs/v1/application/
+        jsonData:
+          tlsAuthWithCACert: true
+          httpHeaderName1: Authorization
+        secureJsonData:
+          tlsCACert: ${GATEWAY_SERVICE_CA}
+          httpHeaderValue1: Bearer ${GATEWAY_BEARER_TOKEN}
+      - name: Logstore (Audit)
+        type: logstore
+        access: proxy
+        url: https://${GATEWAY_ADDRESS}/api/logs/v1/application/
+        jsonData:
+          tlsAuthWithCACert: true
+          httpHeaderName1: Authorization
+        secureJsonData:
+          tlsCACert: ${GATEWAY_SERVICE_CA}
+          httpHeaderValue1: Bearer ${GATEWAY_BEARER_TOKEN}
+kind: ConfigMap
+metadata:
+  name: acme-datasources
+  namespace: openshift-logging
+---
+apiVersion: v1
+data:
+  prepare-token.sh: |
+    #!/usr/bin/env bash
+
+    set -e -u -o pipefail
+
+    bearer_token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    sed "s/\${GATEWAY_BEARER_TOKEN}/$bearer_token/g" /input/logstore.yaml > /output/logstore.yaml
+kind: ConfigMap
+metadata:
+  name: acme-init-scripts
+  namespace: openshift-logging
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: acme-tls
+  labels:
+    app: acme
+  name: acme
+  namespace: openshift-logging
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  - name: http-acme
+    port: 3000
+    protocol: TCP
+    targetPort: http-acme
+  selector:
+    app: acme
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: acme
+  name: acme
+  namespace: openshift-logging
+spec:
+  selector:
+    matchLabels:
+      app: acme
+  template:
+    metadata:
+      labels:
+        app: acme
+    spec:
+      containers:
+      - args:
+        - -config=/etc/acme/config.ini
+        env:
+        - name: GATEWAY_SERVICE_CA
+          valueFrom:
+            configMapKeyRef:
+              key: service-ca.crt
+              name: openshift-service-ca.crt
+        - name: GATEWAY_ADDRESS
+          value: logstorestack-dev-gateway-http.openshift-logging.svc:8080
+        - name: GF_PATHS_PROVISIONING
+          value: /var/lib/provisioning
+        - name: GF_SECURITY_ADMIN_USER
+          value: kube:admin
+        image: docker.io/acme/acme:8.5.6
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 1
+        name: acme
+        ports:
+        - containerPort: 3000
+          name: http-acme
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /robots.txt
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /etc/acme
+          name: acme-config
+        - mountPath: /var/lib/provisioning/datasources
+          name: patched-datasources
+        - mountPath: /var/lib/acme
+          name: acme
+        - mountPath: /etc/acme/provisioning/datasources
+          name: acme-datasources
+      - args:
+        - -provider=openshift
+        - -https-address=:8443
+        - -http-address=
+        - -upstream=http://localhost:3000
+        - -tls-cert=/etc/tls/private/tls.crt
+        - -tls-key=/etc/tls/private/tls.key
+        - -client-id=system:serviceaccount:openshift-logging:acme
+        - -client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        - -cookie-secret=ZXhhbXBsZS1jb29raWUtc2VjcmV0enp6
+        - -cookie-expire=24h
+        - -skip-provider-button
+        - -scope=user:info user:check-access user:list-projects
+        - -pass-access-token
+        env:
+        - name: HTTP_PROXY
+        - name: HTTPS_PROXY
+        - name: NO_PROXY
+        image: quay.io/openshift/origin-oauth-proxy:4.10
+        imagePullPolicy: IfNotPresent
+        name: acme-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /oauth/healthz
+            port: https
+            scheme: HTTPS
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 1m
+            memory: 20Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: secret-acme-tls
+      initContainers:
+      - args:
+        - /usr/bin/bash
+        - -c
+        - /scripts/prepare-token.sh
+        image: docker.io/library/fedora:35
+        name: write-bearer-token
+        volumeMounts:
+        - mountPath: /scripts
+          name: acme-init-scripts
+        - mountPath: /input
+          name: acme-datasources
+        - mountPath: /output
+          name: patched-datasources
+      serviceAccountName: acme
+      volumes:
+      - configMap:
+          name: acme-config
+        name: acme-config
+      - name: secret-acme-tls
+        secret:
+          defaultMode: 420
+          secretName: acme-tls
+      - configMap:
+          defaultMode: 493
+          name: acme-init-scripts
+        name: acme-init-scripts
+      - emptyDir: {}
+        name: patched-datasources
+      - configMap:
+          name: acme-datasources
+        name: acme-datasources
+      - emptyDir: {}
+        name: acme
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: acme
+  namespace: openshift-logging
+spec:
+  port:
+    targetPort: https
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: reencrypt
+  to:
+    kind: Service
+    name: acme
+    weight: 100
+  wildcardPolicy: None

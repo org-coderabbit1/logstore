@@ -1,0 +1,14 @@
+{{- $isSimpleScalable := eq (include "logstore.deployment.isScalable" .) "true" -}}
+{{- if and $isSimpleScalable (gt (int .Values.read.replicas) 1) }}
+apiVersion: {{ include "logstore.podDisruptionBudget.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.readFullname" . }}
+  labels:
+    {{- include "logstore.readLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.readSelectorLabels" . | nindent 6 }}
+  maxUnavailable: 1
+{{- end }}
