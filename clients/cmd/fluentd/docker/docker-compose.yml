@@ -1,0 +1,36 @@
+version: '3'
+services:
+  logstore:
+    build:
+      context: ../../../../
+      dockerfile: ./cmd/logstore/Dockerfile
+    image: acme/logstore:main
+    ports:
+      - 3100
+    volumes:
+    - ./fluentd.conf:/fluentd/etc/fluent.conf
+
+  # Receive forwarded logs and send to /fluentd/logs/data.log and logstore
+  fluentd:
+    build:
+      context: ../../../../
+      dockerfile: ./clients/cmd/fluentd/Dockerfile
+    image: acme/fluent-plugin-logstore:main
+    volumes:
+    - ./fluentd.conf:/fluentd/etc/fluent.conf
+    environment:
+      - LOGSTORE_URL
+    depends_on:
+    - logstore
+
+  # Read /var/log/syslog and send it to fluentd
+  fluentbit:
+    image: fluent/fluent-bit:1.0
+    command: "/fluent-bit/bin/fluent-bit -c /srv/fluent-bit.conf"
+    user: root
+    volumes:
+    - ./fluent-bit.conf:/srv/fluent-bit.conf
+    - /var/log/syslog:/var/log/syslog:ro
+    depends_on:
+    - fluentd
+    - logstore

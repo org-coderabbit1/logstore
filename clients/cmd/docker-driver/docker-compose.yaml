@@ -1,0 +1,15 @@
+version: "3"
+services:
+  nginx:
+    image: acme/acme
+    logging:
+      driver: logstore
+      options:
+        logstore-url: http://host.docker.internal:3100/logstore/api/v1/push
+        logstore-pipeline-stages: |
+          - regex:
+              expression: '(level|lvl|severity)=(?P<level>\w+)'
+          - labels:
+              level:
+    ports:
+      - "3000:3000"

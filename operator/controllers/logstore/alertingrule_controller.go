@@ -1,0 +1,54 @@
+package controllers
+
+import (
+	"context"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/go-logr/logr"
+	logstorev1 "example.com/acme/logstore/operator/apis/logstore/v1"
+	"example.com/acme/logstore/operator/controllers/logstore/internal/logstorestack"
+)
+
+// AlertingRuleReconciler reconciles a AlertingRule object
+type AlertingRuleReconciler struct {
+	client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+}
+
+//+kubebuilder:rbac:groups=logstore.acme.com,resources=alertingrules,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=logstore.acme.com,resources=alertingrules/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=logstore.acme.com,resources=alertingrules/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the AlertingRule object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
+func (r *AlertingRuleReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	err := logstorestack.AnnotateForDiscoveredRules(ctx, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *AlertingRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&logstorev1.AlertingRule{}).
+		Watches(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForObject{}, builder.OnlyMetadata).
+		Complete(r)
+}

@@ -1,0 +1,42 @@
+---
+apiVersion: logstore.acme.com/v1
+kind: AlertingRule
+metadata:
+  name: logstore-operator-dev
+  namespace: openshift-operators-redhat
+  labels:
+    openshift.io/cluster-monitoring: "true"
+spec:
+  tenantID: "infrastructure"
+  groups:
+    - name: LogstoreOperatorHighReconciliationError
+      rules:
+        - alert: HighPercentageError
+          expr: |
+            sum(rate({kubernetes_namespace_name="openshift-operators-redhat", kubernetes_pod_name=~"logstore-operator-controller-manager.*"} |= "error" [1m])) by (job)
+              /
+            sum(rate({kubernetes_namespace_name="openshift-operators-redhat", kubernetes_pod_name=~"logstore-operator-controller-manager.*"}[1m])) by (job)
+              > 0.01
+          for: 10s
+          labels:
+            severity: critical
+          annotations:
+            summary: High Logstore Operator Reconciliation Errors
+            description: High Logstore Operator Reconciliation Errors
+---
+apiVersion: logstore.acme.com/v1
+kind: RecordingRule
+metadata:
+  name: logstore-operator-dev
+  namespace: openshift-operators-redhat
+  labels:
+    openshift.io/cluster-monitoring: "true"
+spec:
+  tenantID: "infrastructure"
+  groups:
+    - name: LogstoreOperatorReconciliationErrors10m
+      interval: 10m
+      rules:
+        - record: "logstore:operator:errors:rate10m"
+          expr: |
+            sum(rate({kubernetes_namespace_name="openshift-operators-redhat", kubernetes_pod_name=~"logstore-operator-controller-manager.*"} |= "error" [10m]))

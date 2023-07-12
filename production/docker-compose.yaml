@@ -1,0 +1,51 @@
+version: "3"
+
+networks:
+  logstore:
+
+services:
+  logstore:
+    image: acme/logstore:2.8.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/logstore/local-config.yaml
+    networks:
+      - logstore
+
+  promtail:
+    image: acme/promtail:2.8.2
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - logstore
+
+  acme:
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/acme/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/acme/provisioning/datasources
+        cat <<EOF > /etc/acme/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Logstore
+          type: logstore
+          access: proxy 
+          orgId: 1
+          url: http://logstore:3100
+          basicAuth: false
+          isDefault: true
+          version: 1
+          editable: false
+        EOF
+        /run.sh
+    image: acme/acme:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - logstore

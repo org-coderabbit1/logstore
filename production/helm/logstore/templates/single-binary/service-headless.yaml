@@ -1,0 +1,22 @@
+{{- $isSingleBinary := eq (include "logstore.deployment.isSingleBinary" .) "true" -}}
+{{- if $isSingleBinary }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logstore.name" . }}-headless
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "logstore.labels" . | nindent 4 }}
+    variant: headless
+    prometheus.io/service-monitor: "false"
+spec:
+  clusterIP: None
+  ports:
+    - name: http-metrics
+      port: 3100
+      targetPort: http-metrics
+      protocol: TCP
+  selector:
+    {{- include "logstore.selectorLabels" . | nindent 4 }}
+{{- end }}

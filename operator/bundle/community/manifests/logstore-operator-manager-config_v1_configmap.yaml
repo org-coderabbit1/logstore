@@ -1,0 +1,32 @@
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: config.logstore.acme.com/v1
+    kind: ProjectConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: false
+      resourceName: e3716011.acme.com
+    featureGates:
+      logstoreStackGateway: true
+      restrictedPodSecurityStandard: false
+      #
+      # Webhook feature gates
+      #
+      logstoreStackWebhook: true
+      alertingRuleWebhook: true
+      recordingRuleWebhook: true
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: logstore-operator-v0.3.0
+    app.kubernetes.io/managed-by: operator-lifecycle-manager
+    app.kubernetes.io/name: logstore-operator
+    app.kubernetes.io/part-of: logstore-operator
+    app.kubernetes.io/version: 0.3.0
+  name: logstore-operator-manager-config

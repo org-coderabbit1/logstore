@@ -1,0 +1,87 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-logstore-acme-com-v1-alertingrule
+  failurePolicy: Fail
+  name: valertingrule.logstore.acme.com
+  rules:
+  - apiGroups:
+    - logstore.acme.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - alertingrules
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-logstore-acme-com-v1-logstorestack
+  failurePolicy: Fail
+  name: vlogstorestack.logstore.acme.com
+  rules:
+  - apiGroups:
+    - logstore.acme.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - logstorestacks
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-logstore-acme-com-v1-recordingrule
+  failurePolicy: Fail
+  name: vrecordingrule.logstore.acme.com
+  rules:
+  - apiGroups:
+    - logstore.acme.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - recordingrules
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-logstore-acme-com-v1-rulerconfig
+  failurePolicy: Fail
+  name: vrulerconfig.logstore.acme.com
+  rules:
+  - apiGroups:
+    - logstore.acme.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rulerconfigs
+  sideEffects: None

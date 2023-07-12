@@ -1,0 +1,114 @@
+{{- if .Values.tableManager.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "logstore.tableManagerFullname" . }}
+  labels:
+    {{- include "logstore.tableManagerLabels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.logstore.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.tableManager.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.logstore.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "logstore.tableManagerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/config.yaml") . | sha256sum }}
+        {{- with .Values.logstore.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.tableManager.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "logstore.tableManagerSelectorLabels" . | nindent 8 }}
+        {{- with .Values.logstore.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.tableManager.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "logstore.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- include "logstore.tableManagerPriorityClassName" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.logstore.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.tableManager.terminationGracePeriodSeconds }}
+      containers:
+        - name: table-manager
+          image: {{ include "logstore.image" . }}
+          imagePullPolicy: {{ .Values.logstore.image.pullPolicy }}
+          args:
+            - -config.file=/etc/logstore/config/config.yaml
+            - -target=table-manager
+            {{- with .Values.tableManager.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http-metrics
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+          {{- with .Values.tableManager.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tableManager.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.logstore.containerSecurityContext | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.logstore.readinessProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.logstore.livenessProbe | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/logstore/config
+            {{- with .Values.tableManager.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.tableManager.resources | nindent 12 }}
+        {{- if .Values.tableManager.extraContainers }}
+        {{- toYaml .Values.tableManager.extraContainers | nindent 8}}
+        {{- end }}
+      {{- with .Values.tableManager.affinity }}
+      affinity:
+        {{- tpl . $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tableManager.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tableManager.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          {{- if .Values.logstore.existingSecretForConfig }}
+          secret:
+            secretName: {{ .Values.logstore.existingSecretForConfig }}
+          {{- else }}
+          {{- include "logstore.configVolume" . | nindent 10 }}
+          {{- end }}
+        {{- with .Values.tableManager.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

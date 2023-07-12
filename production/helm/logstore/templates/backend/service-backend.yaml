@@ -1,0 +1,27 @@
+{{- $isSimpleScalable := eq (include "logstore.deployment.isScalable" .) "true" -}}
+{{- if and $isSimpleScalable (not .Values.read.legacyReadTarget ) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logstore.backendFullname" . }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "logstore.backendLabels" . | nindent 4 }}
+    {{- with .Values.backend.serviceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: 3100
+      targetPort: http-metrics
+      protocol: TCP
+    - name: grpc
+      port: 9095
+      targetPort: grpc
+      protocol: TCP
+  selector:
+    {{- include "logstore.backendSelectorLabels" . | nindent 4 }}
+{{- end }}
