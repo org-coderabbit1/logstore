@@ -1,0 +1,177 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed .Values.ruler.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "logstore.rulerFullname" . }}
+  labels:
+    {{- include "logstore.rulerLabels" . | nindent 4 }}
+    app.kubernetes.io/part-of: memberlist
+  {{- with .Values.logstore.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.ruler.replicas }}
+  revisionHistoryLimit: {{ .Values.logstore.revisionHistoryLimit }}
+  serviceName: {{ include "logstore.rulerFullname" . }}
+  selector:
+    matchLabels:
+      {{- include "logstore.rulerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "logstore.config.checksum" . | nindent 8 }}
+        {{- with .Values.logstore.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.ruler.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "logstore.rulerSelectorLabels" . | nindent 8 }}
+        app.kubernetes.io/part-of: memberlist
+        {{- with .Values.logstore.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.ruler.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "logstore.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ruler.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- include "logstore.rulerPriorityClassName" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.logstore.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.ruler.terminationGracePeriodSeconds }}
+      {{- with .Values.ruler.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ruler
+          image: {{ include "logstore.image" . }}
+          imagePullPolicy: {{ .Values.logstore.image.pullPolicy }}
+          args:
+            - -config.file=/etc/logstore/config/config.yaml
+            - -target=ruler
+            {{- with .Values.ruler.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http-metrics
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+            - name: http-memberlist
+              containerPort: 7946
+              protocol: TCP
+          {{- with .Values.ruler.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.ruler.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.logstore.containerSecurityContext | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.logstore.readinessProbe | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/logstore/config
+            - name: runtime-config
+              mountPath: /etc/logstore/runtime-config
+            - name: data
+              mountPath: /var/logstore
+            - name: tmp
+              mountPath: /tmp/logstore
+            {{- if .Values.enterprise.enabled }}
+            - name: license
+              mountPath: /etc/logstore/license
+            {{- end }}
+            {{- range $dir, $_ := .Values.ruler.directories }}
+            - name: {{ include "logstore.rulerRulesDirName" $dir }}
+              mountPath: /etc/logstore/rules/{{ $dir }}
+            {{- end }}
+            {{- with .Values.ruler.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.ruler.resources | nindent 12 }}
+        {{- with .Values.ruler.extraContainers }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- with .Values.ruler.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ruler.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ruler.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ruler.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          {{- include "logstore.configVolume" . | nindent 10 }}
+        - name: runtime-config
+          configMap:
+            name: {{ template "logstore.name" . }}-runtime
+        {{- if .Values.enterprise.enabled }}
+        - name: license
+          secret:
+          {{- if .Values.enterprise.useExternalLicense }}
+            secretName: {{ .Values.enterprise.externalLicenseName }}
+          {{- else }}
+            secretName: enterprise-logs-license
+          {{- end }}
+        {{- end }}
+        {{- range $dir, $_ := .Values.ruler.directories }}
+        - name: {{ include "logstore.rulerRulesDirName" $dir }}
+          configMap:
+            name: {{ include "logstore.rulerFullname" $ }}-{{ include "logstore.rulerRulesDirName" $dir }}
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- with .Values.ruler.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  {{- if not .Values.ruler.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        {{- with .Values.ruler.persistence.annotations }}
+        annotations:
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- with .Values.ruler.persistence.storageClass }}
+        storageClassName: {{ if (eq "-" .) }}""{{ else }}{{ . }}{{ end }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.ruler.persistence.size | quote }}
+  {{- end }}
+{{- end }}

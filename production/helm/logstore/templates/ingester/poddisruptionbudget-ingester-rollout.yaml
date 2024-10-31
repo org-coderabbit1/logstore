@@ -1,0 +1,21 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed (gt (int .Values.ingester.replicas) 1) (.Values.ingester.zoneAwareReplication.enabled) }}
+{{- if kindIs "invalid" .Values.ingester.maxUnavailable }}
+{{- fail "`.Values.ingester.maxUnavailable` must be set when `.Values.ingester.replicas` is greater than 1." }}
+{{- else }}
+apiVersion: {{ include "logstore.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.ingesterFullname" . }}-rollout
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "logstore.ingesterLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      rollout-group: ingester
+  {{- with .Values.ingester.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

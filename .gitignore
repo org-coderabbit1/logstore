@@ -1,0 +1,65 @@
+.uptodate
+.uptodate-debug
+.pkg
+.cache
+*.output
+*.tgz
+*.exe
+__debug_bin
+requirements.lock
+mixin/vendor/
+cmd/logstore/logstore
+cmd/logcli/logcli
+clients/cmd/promtail/promtail
+cmd/logstore/logstore-debug
+cmd/logstoretool/logstoretool
+clients/cmd/promtail/promtail-debug
+clients/cmd/docker-driver/docker-driver
+cmd/logstore-canary/logstore-canary
+cmd/logstore-canary-test/logstore-canary-test
+clients/cmd/fluent-bit/out_acme_logstore.so
+clients/cmd/fluent-bit/out_acme_logstore.h
+cmd/migrate/migrate
+cmd/querytee/querytee
+/logstore
+/promtail
+/logcli
+/logstore-canary
+dlv
+rootfs/
+dist
+*coverage.txt
+*test_results.txt
+.DS_Store
+.aws-sam
+.idea
+pkg/logstore/wal
+tools/lambda-promtail/main
+
+# Workspaces
+*.work
+*.work.sum
+
+# emacs
+.#*
+
+# terraform
+.terraform*
+*.tfstate*
+*.tfvars
+
+# vscode
+.vscode
+
+# nix
+nix/result
+/result
+
+# snyk
+.dccache
+
+# helm test
+production/helm/logstore/src/helm-test/helm-test
+
+# Go telemetry
+.config

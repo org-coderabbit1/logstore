@@ -1,0 +1,14 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if $isDistributed }}
+{{- range $dir, $files := .Values.ruler.directories }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logstore.rulerFullname" $ }}-{{ include "logstore.rulerRulesDirName" $dir }}
+  labels:
+    {{- include "logstore.rulerLabels" $ | nindent 4 }}
+data:
+  {{- toYaml $files | nindent 2}}
+{{- end }}
+{{- end }}

@@ -1,0 +1,13 @@
+ARG GO_VERSION=1.23
+FROM golang:${GO_VERSION} as build
+
+COPY . /src/logstore
+WORKDIR /src/logstore
+RUN go env GOARCH > /goarch
+RUN make clean && make GOARCH=$(cat /goarch) BUILD_IN_CONTAINER=true GOEXPERIMENT=boringcrypto logstore-canary-boringcrypto
+
+FROM gcr.io/distroless/base-nossl:debug
+COPY --from=build /src/logstore/cmd/logstore-canary-boringcrypto/logstore-canary-boringcrypto /usr/bin/logstore-canary
+SHELL [ "/busybox/sh", "-c" ]
+RUN ln -s /busybox/sh /bin/sh
+ENTRYPOINT [ "/usr/bin/logstore-canary" ]

@@ -1,0 +1,16 @@
+{{- if .Values.chunksCache.enabled }}
+apiVersion: {{ include "logstore.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.fullname" . }}-memcached-chunks-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "logstore.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: memcached-chunks-cache
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: memcached-chunks-cache
+  maxUnavailable: 1
+{{- end -}}

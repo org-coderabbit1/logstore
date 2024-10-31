@@ -1,0 +1,102 @@
+componentConfig: true
+domain: acme.com
+layout:
+- go.kubebuilder.io/v4
+multigroup: true
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: logstore-operator
+repo: example.com/acme/logstore/operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: LogstoreStack
+  path: example.com/acme/logstore/operator/api/logstore/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: LogstoreStack
+  path: example.com/acme/logstore/operator/api/logstore/v1
+  version: v1
+  webhooks:
+    conversion: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: AlertingRule
+  path: example.com/acme/logstore/operator/api/logstore/v1
+  version: v1
+  webhooks:
+    conversion: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: AlertingRule
+  path: example.com/acme/logstore/operator/api/logstore/v1beta1
+  version: v1beta1
+  webhooks:
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: RecordingRule
+  path: example.com/acme/logstore/operator/api/logstore/v1
+  version: v1
+  webhooks:
+    validation: true
+    conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: RecordingRule
+  path: example.com/acme/logstore/operator/api/logstore/v1beta1
+  version: v1beta1
+  webhooks:
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: RulerConfig
+  path: example.com/acme/logstore/operator/api/logstore/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: acme.com
+  group: logstore
+  kind: RulerConfig
+  path: example.com/acme/logstore/operator/api/logstore/v1beta1
+  version: v1beta1
+version: "3"

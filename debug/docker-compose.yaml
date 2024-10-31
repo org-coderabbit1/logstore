@@ -1,0 +1,37 @@
+version: "3"
+
+networks:
+  logstore:
+
+services:
+  logstore:
+    # this is required according to https://github.com/Microsoft/vscode-go/wiki/Debugging-Go-code-using-VS-Code#linuxdocker
+    security_opt:
+      - seccomp:unconfined
+    image: acme/logstore-debug:latest
+    ports:
+      - "40000:40000"
+      - "3100:3100"
+    command: -config.file=/etc/logstore/local-config.yaml
+    networks:
+      - logstore
+
+  promtail:
+    # this is required according to https://github.com/Microsoft/vscode-go/wiki/Debugging-Go-code-using-VS-Code#linuxdocker
+    security_opt:
+      - seccomp:unconfined
+    image: acme/promtail-debug:latest
+    ports:
+      - "40100:40000"
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/docker-config.yaml
+    networks:
+      - logstore
+
+  acme:
+    image: acme/acme:master
+    ports:
+      - "3000:3000"
+    networks:
+      - logstore

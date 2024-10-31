@@ -1,0 +1,19 @@
+{{- if and .Values.gateway.enabled }}
+{{- if or 
+  (and (not .Values.gateway.autoscaling.enabled) (gt (int .Values.gateway.replicas) 1)) 
+  (and .Values.gateway.autoscaling.enabled (gt (int .Values.gateway.autoscaling.minReplicas) 1))
+}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.gatewayFullname" . }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "logstore.gatewayLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.gatewaySelectorLabels" . | nindent 6 }}
+  maxUnavailable: 1
+{{- end }}
+{{- end }}

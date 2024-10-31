@@ -1,0 +1,21 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed (gt (int .Values.distributor.replicas) 1) }}
+{{- if kindIs "invalid" .Values.distributor.maxUnavailable }}
+{{- fail "`.Values.distributor.maxUnavailable` must be set when `.Values.distributor.replicas` is greater than 1." }}
+{{- else }}
+apiVersion: {{ include "logstore.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.distributorFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "logstore.distributorLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.distributorSelectorLabels" . | nindent 6 }}
+  {{- with .Values.distributor.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

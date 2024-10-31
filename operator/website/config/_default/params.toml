@@ -1,0 +1,47 @@
+# Meta Data for SEO
+
+## Homepage
+title = "Logstore Operator"
+titleSeparator = "-"
+titleAddition = "Kubernetes Operator for Logstore"
+description = "A Kubernetes Operator for Logstore provided by the Acme Logstore SIG operator. "
+
+## Open Graph + Twitter Cards
+images = ["logo.png"]
+#twitterSite = ""
+#twitterCreator = ""
+#facebookAuthor = ""
+#facebookPublisher = ""
+ogLocale = "en_US"
+
+## JSON-LD
+schemaType = "Organization"
+schemaLogo = "logo.png"
+schemaTwitter = ""
+schemaLinkedIn = ""
+schemaGitHub = "https://example.com/acme"
+schemaSection = "blog"
+
+## Sitelinks Search Box
+siteLinksSearchBox = false
+
+## Chrome Browser
+themeColor = "#fff"
+
+# Footer
+footer = "Powered by <a href=\"https://www.netlify.com/\">Netlify</a>, <a href=\"https://gohugo.io/\">Hugo</a>, and based on <a href=\"https://getdoks.org/\">Doks</a>"
+
+# Edit Page
+docsRepo = "https://example.com/acme/logstore"
+editPage = false
+
+[options]
+  lazySizes = false
+  clipBoard = true
+  instantPage = false
+  flexSearch = true
+  darkMode = true
+  bootStrapJs = false
+  breadCrumb = true
+  highLight = false
+  kaTex = false
