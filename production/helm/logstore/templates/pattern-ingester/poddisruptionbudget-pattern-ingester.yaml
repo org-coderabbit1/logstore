@@ -1,0 +1,17 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed (gt (int .Values.patternIngester.replicas) 1) }}
+apiVersion: {{ include "logstore.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.patternIngesterFullname" . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.patternIngesterLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.patternIngesterSelectorLabels" . | nindent 6 }}
+  {{- with .Values.patternIngester.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,25 @@
+---
+groups:
+- name: logging_logstore.rules
+  rules:
+  - record: code_handler_job_namespace:logstorestack_gateway_http_requests:irate1m
+    expr: |
+      sum(
+        irate(
+          http_requests_total{container="gateway", group="logsv1"}[1m]
+        )
+      ) by (code, handler, job, namespace)
+  - record: job_namespace_route_statuscode:logstore_request_duration_seconds_count:irate1m
+    expr: |
+      sum(
+        irate(
+          logstore_request_duration_seconds_count[1m]
+        )
+      ) by (job, namespace, route, status_code)
+  - record: job_le_namespace_operation:logstore_boltdb_shipper_request_duration_seconds_bucket:rate5m
+    expr: |
+      sum(
+        rate(
+          logstore_boltdb_shipper_request_duration_seconds_bucket[5m]
+        )
+      ) by (job, le, namespace, operation)

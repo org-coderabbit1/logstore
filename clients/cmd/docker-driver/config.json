@@ -1,0 +1,34 @@
+{
+    "description": "Logstore Logging Driver",
+    "documentation": "https://example.com/acme/logstore",
+    "entrypoint": [
+        "/bin/docker-driver"
+    ],
+    "network": {
+        "type": "host"
+    },
+    "interface": {
+        "types": [
+            "docker.logdriver/1.0"
+        ],
+        "socket": "logstore.sock"
+    },
+    "env": [
+        {
+            "name": "LOG_LEVEL",
+            "description": "Set log level to output for plugin logs",
+            "value": "info",
+            "settable": [
+                "value"
+            ]
+        },
+        {
+            "name": "PPROF_PORT",
+            "description": "Activate pprof debugging endpoint for the given port.",
+            "value": "",
+            "settable": [
+                "value"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,243 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed .Values.ingester.zoneAwareReplication.enabled }}
+{{- $replicas := (include "logstore.ingester.replicaCount" .) -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "logstore.ingesterFullname" . }}-zone-b
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.ingesterLabels" . | nindent 4 }}
+    app.kubernetes.io/part-of: memberlist
+    name: {{ include "logstore.prefixIngesterName" . }}ingester-zone-b
+    rollout-group: {{ include "logstore.prefixRolloutGroup" . }}ingester
+    {{- with .Values.ingester.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    rollout-max-unavailable: "{{ include "logstore.ingester.maxUnavailable" (dict "ctx" . "replicas" $replicas)}}"
+    {{- with .Values.logstore.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.ingester.zoneAwareReplication.zoneB.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+{{- if not .Values.ingester.autoscaling.enabled }}
+  replicas: {{ $replicas }}
+{{- end }}
+  podManagementPolicy: Parallel
+  serviceName: {{ include "logstore.ingesterFullname" . }}-zone-b-headless
+  revisionHistoryLimit: {{ .Values.logstore.revisionHistoryLimit }}
+  {{- if and (semverCompare ">= 1.23-0" (include "logstore.kubeVersion" .)) (.Values.ingester.persistence.enableStatefulSetAutoDeletePVC)  }}
+  {{/*
+    Data on the read nodes is easy to replace, so we want to always delete PVCs to make
+    operation easier, and will rely on re-fetching data when needed.
+  */}}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: {{ .Values.ingester.persistence.whenDeleted }}
+    whenScaled: {{ .Values.ingester.persistence.whenScaled }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "logstore.ingesterSelectorLabels" . | nindent 6 }}
+      name: {{ include "logstore.prefixIngesterName" . }}ingester-zone-b
+      rollout-group: {{ include "logstore.prefixRolloutGroup" . }}ingester
+{{- with .Values.ingester.updateStrategy }}
+  updateStrategy:
+     {{- tpl (. | toYaml) $ | nindent 4 }}
+{{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- include "logstore.config.checksum" . | nindent 8 }}
+        {{- with .Values.logstore.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.ingester.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.ingester.zoneAwareReplication.zoneB.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "logstore.ingesterLabels" . | nindent 8 }}
+        app.kubernetes.io/part-of: memberlist
+        name: {{ include "logstore.prefixIngesterName" . }}ingester-zone-b
+        rollout-group: {{ include "logstore.prefixRolloutGroup" . }}ingester
+        {{- with merge (dict) .Values.ingester.podLabels .Values.logstore.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if semverCompare ">=1.19-0" (include "logstore.kubeVersion" .) }}
+      {{- with .Values.ingester.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- tpl ( . | toYaml) $ | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      serviceAccountName: {{ include "logstore.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingester.dnsConfig | default .Values.logstore.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingester.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and (semverCompare ">=1.33-0" (include "logstore.kubeVersion" .)) (kindIs "bool" .Values.ingester.hostUsers) }}
+      hostUsers: {{ .Values.ingester.hostUsers }}
+      {{- end }}
+      {{- include "logstore.ingesterPriorityClassName" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.logstore.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.ingester.terminationGracePeriodSeconds }}
+      {{- with .Values.ingester.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ingester
+          image: {{ include "logstore.image" . }}
+          imagePullPolicy: {{ .Values.logstore.image.pullPolicy }}
+          {{- if or .Values.logstore.command .Values.ingester.command }}
+          command:
+            - {{ coalesce .Values.ingester.command .Values.logstore.command | quote }}
+          {{- end }}
+          args:
+            - -config.file=/etc/logstore/config/config.yaml
+            - -ingester.availability-zone=zone-b
+            - -ingester.unregister-on-shutdown=false
+            - -ingester.tokens-file-path=/var/logstore/ring-tokens
+            - -target=ingester
+            {{- with (concat .Values.global.extraArgs .Values.ingester.extraArgs) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http-metrics
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+            - name: http-memberlist
+              containerPort: 7946
+              protocol: TCP
+          {{- with (concat .Values.global.extraEnv .Values.ingester.extraEnv) | uniq }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (concat .Values.global.extraEnvFrom .Values.ingester.extraEnvFrom) | uniq }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.logstore.containerSecurityContext | nindent 12 }}
+          {{- include "logstore.ingester.readinessProbe" . | nindent 10 }}
+          {{- include "logstore.ingester.livenessProbe" . | nindent 10 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/logstore/config
+            - name: runtime-config
+              mountPath: /etc/logstore/runtime-config
+            - name: data
+              mountPath: /var/logstore
+            {{- if .Values.enterprise.enabled }}
+            - name: license
+              mountPath: /etc/logstore/license
+            {{- end }}
+            {{- with (concat .Values.global.extraVolumeMounts .Values.ingester.extraVolumeMounts) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.ingester.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.ingester.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- if .Values.ingester.extraContainers }}
+        {{- toYaml .Values.ingester.extraContainers | nindent 8}}
+        {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: rollout-group
+                    operator: In
+                    values:
+                      - {{ include "logstore.prefixRolloutGroup" . }}ingester
+                  - key: name
+                    operator: NotIn
+                    values:
+                      - {{ include "logstore.prefixIngesterName" . }}ingester-zone-b
+              topologyKey: kubernetes.io/hostname
+        {{- with .Values.ingester.zoneAwareReplication.zoneB.extraAffinity }}
+          {{- tpl ( . | toYaml) $ | nindent 8 }}
+        {{- end }}
+      {{- with .Values.ingester.zoneAwareReplication.zoneB.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingester.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          {{- include "logstore.configVolume" . | nindent 10 }}
+        - name: runtime-config
+          configMap:
+            name: {{ template "logstore.name" . }}-runtime
+        {{- if .Values.enterprise.enabled }}
+        - name: license
+          secret:
+          {{- if .Values.enterprise.useExternalLicense }}
+            secretName: {{ .Values.enterprise.externalLicenseName }}
+          {{- else }}
+            secretName: enterprise-logs-license
+          {{- end }}
+        {{- end }}
+        {{- with (concat .Values.global.extraVolumes .Values.ingester.extraVolumes) | uniq }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  {{- if not .Values.ingester.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+  {{- else if .Values.ingester.persistence.inMemory }}
+        - name: data
+        {{- if .Values.ingester.persistence.inMemory }}
+          emptyDir:
+            medium: Memory
+        {{- end }}
+        {{- if .Values.ingester.persistence.size }}
+            sizeLimit: {{ .Values.ingester.persistence.size }}
+        {{- end }}
+  {{- else }}
+  volumeClaimTemplates:
+  {{- range .Values.ingester.persistence.claims }}
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: {{ .name }}
+        {{- with .annotations }}
+        annotations:
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .accessModes | nindent 10 }}
+        {{- with .storageClass }}
+        storageClassName: {{ if (eq "-" .) }}""{{ else }}{{ . }}{{ end }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .size | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

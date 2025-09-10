@@ -1,0 +1,41 @@
+{{- $isSimpleScalable := eq (include "logstore.deployment.isScalable" .) "true" -}}
+{{ if $isSimpleScalable }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logstore.readFullname" . }}-headless
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.readSelectorLabels" . | nindent 4 }}
+    {{- with .Values.logstore.serviceLabels }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+    {{- with .Values.read.service.labels }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+    variant: headless
+    prometheus.io/service-monitor: "false"
+  annotations:
+    {{- with .Values.logstore.serviceAnnotations }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+    {{- with .Values.read.service.annotations }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http-metrics
+      port: {{ .Values.logstore.server.http_listen_port }}
+      targetPort: http-metrics
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.logstore.server.grpc_listen_port }}
+      targetPort: grpc
+      protocol: TCP
+      appProtocol: tcp
+  selector:
+    {{- include "logstore.readSelectorLabels" . | nindent 4 }}
+{{- end }}

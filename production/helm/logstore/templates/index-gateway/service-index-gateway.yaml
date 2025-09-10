@@ -1,0 +1,36 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if $isDistributed }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logstore.indexGatewayFullname" . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.indexGatewayLabels" . | nindent 4 }}
+    {{- with .Values.indexGateway.serviceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- with .Values.logstore.serviceAnnotations }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+    {{- with .Values.indexGateway.serviceAnnotations }}
+    {{- toYaml . | nindent 4}}
+    {{- end }}
+spec:
+  type: {{ .Values.indexGateway.serviceType }}
+  ports:
+    - name: http-metrics
+      port: 3100
+      targetPort: http-metrics
+      protocol: TCP
+    - name: grpc
+      port: 9095
+      targetPort: grpc
+      protocol: TCP
+      {{- with .Values.indexGateway.appProtocol.grpc }}
+      appProtocol: {{ . }}
+      {{- end }}
+  selector:
+    {{- include "logstore.indexGatewaySelectorLabels" . | nindent 4 }}
+{{- end }}

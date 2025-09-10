@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/logstore.git",
+          "subdir": "production/logstore-mixin"
+        }
+      },
+      "version": "v3.5.4"
+    }
+  ],
+  "legacyImports": true
+}

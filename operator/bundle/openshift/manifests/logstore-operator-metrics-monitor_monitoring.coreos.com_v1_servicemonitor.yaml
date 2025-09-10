@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: logstore-operator-0.1.0
+    app.kubernetes.io/managed-by: operator-lifecycle-manager
+    app.kubernetes.io/name: logstore-operator
+    app.kubernetes.io/part-of: cluster-logging
+    app.kubernetes.io/version: 0.1.0
+    name: logstore-operator
+  name: logstore-operator-metrics-monitor
+spec:
+  endpoints:
+  - authorization:
+      credentials:
+        key: token
+        name: logstore-operator-controller-manager-metrics-token
+      type: bearer
+    interval: 30s
+    path: /metrics
+    scheme: https
+    scrapeTimeout: 10s
+    targetPort: 8443
+    tlsConfig:
+      ca:
+        secret:
+          key: service-ca.crt
+          name: logstore-operator-controller-manager-metrics-token
+      serverName: logstore-operator-controller-manager-metrics-service.openshift-operators-redhat.svc
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/name: logstore-operator

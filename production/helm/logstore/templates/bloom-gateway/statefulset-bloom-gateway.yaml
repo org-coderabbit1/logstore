@@ -1,0 +1,193 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if (and $isDistributed (gt (int .Values.bloomGateway.replicas) 0)) -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "logstore.bloomGatewayFullname" . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.bloomGatewayLabels" . | nindent 4 }}
+  {{- with .Values.logstore.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.bloomGateway.replicas }}
+  podManagementPolicy: Parallel
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+  serviceName: {{ include "logstore.bloomGatewayFullname" . }}-headless
+  revisionHistoryLimit: {{ .Values.logstore.revisionHistoryLimit }}
+  {{- if and (semverCompare ">= 1.23-0" (include "logstore.kubeVersion" .)) (.Values.bloomGateway.persistence.enableStatefulSetAutoDeletePVC)  }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: {{ .Values.bloomGateway.persistence.whenDeleted }}
+    whenScaled: {{ .Values.bloomGateway.persistence.whenScaled }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "logstore.bloomGatewaySelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "logstore.config.checksum" . | nindent 8 }}
+        {{- with .Values.logstore.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.bloomGateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "logstore.bloomGatewayLabels" . | nindent 8 }}
+        app.kubernetes.io/part-of: memberlist
+        {{- with merge (dict) .Values.logstore.podLabels .Values.bloomGateway.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "logstore.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bloomGateway.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and (semverCompare ">=1.33-0" (include "logstore.kubeVersion" .)) (kindIs "bool" .Values.bloomGateway.hostUsers) }}
+      hostUsers: {{ .Values.bloomGateway.hostUsers }}
+      {{- end }}
+      {{- with .Values.bloomGateway.dnsConfig | default .Values.logstore.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- include "logstore.bloomGatewayPriorityClassName" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.logstore.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.bloomGateway.terminationGracePeriodSeconds }}
+      {{- with .Values.bloomGateway.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bloom-gateway
+          image: {{ include "logstore.image" . }}
+          imagePullPolicy: {{ .Values.logstore.image.pullPolicy }}
+          {{- if or .Values.logstore.command .Values.bloomGateway.command }}
+          command:
+            - {{ coalesce .Values.bloomGateway.command .Values.logstore.command | quote }}
+          {{- end }}
+          args:
+            - -config.file=/etc/logstore/config/config.yaml
+            - -target=bloom-gateway
+            {{- with (concat .Values.global.extraArgs .Values.bloomGateway.extraArgs) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http-metrics
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+            - name: http-memberlist
+              containerPort: 7946
+              protocol: TCP
+          {{- with (concat .Values.global.extraEnv .Values.bloomGateway.extraEnv) | uniq }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (concat .Values.global.extraEnvFrom .Values.bloomGateway.extraEnvFrom) | uniq }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.logstore.containerSecurityContext | nindent 12 }}
+          {{- include "logstore.bloomGateway.livenessProbe" . | nindent 10 }}
+          {{- include "logstore.bloomGateway.readinessProbe" . | nindent 10 }}
+          {{- include "logstore.bloomGateway.startupProbe" . | nindent 10 }}
+          volumeMounts:
+            - name: temp
+              mountPath: /tmp
+            - name: config
+              mountPath: /etc/logstore/config
+            - name: runtime-config
+              mountPath: /etc/logstore/runtime-config
+            - name: data
+              mountPath: /var/logstore
+            {{- if .Values.enterprise.enabled }}
+            - name: license
+              mountPath: /etc/logstore/license
+            {{- end }}
+            {{- with (concat .Values.global.extraVolumeMounts .Values.bloomGateway.extraVolumeMounts) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.bloomGateway.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- if .Values.bloomGateway.extraContainers }}
+        {{- toYaml .Values.bloomGateway.extraContainers | nindent 8}}
+        {{- end }}
+      {{- with .Values.bloomGateway.affinity }}
+      affinity:
+        {{- tpl ( . | toYaml) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bloomGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bloomGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: temp
+          emptyDir: {}
+        - name: config
+          {{- include "logstore.configVolume" . | nindent 10 }}
+        - name: runtime-config
+          configMap:
+            name: {{ template "logstore.name" . }}-runtime
+        {{- if .Values.enterprise.enabled }}
+        - name: license
+          secret:
+          {{- if .Values.enterprise.useExternalLicense }}
+            secretName: {{ .Values.enterprise.externalLicenseName }}
+          {{- else }}
+            secretName: enterprise-logs-license
+          {{- end }}
+        {{- end }}
+        {{- if not .Values.bloomGateway.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- with (concat .Values.global.extraVolumes .Values.bloomGateway.extraVolumes) | uniq }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  {{- if .Values.bloomGateway.persistence.enabled }}
+  volumeClaimTemplates:
+  {{- range .Values.bloomGateway.persistence.claims }}
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: {{ .name }}
+        {{- with .annotations }}
+        annotations:
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
+        {{- with .labels }}
+        labels:
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .accessModes | nindent 10 }}
+        {{- with .storageClass }}
+        storageClassName: {{ if (eq "-" .) }}""{{ else }}{{ . }}{{ end }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .size | quote }}
+  {{- end }}
+  {{- end }}
+{{- end -}}

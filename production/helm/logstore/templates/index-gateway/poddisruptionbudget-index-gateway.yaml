@@ -1,0 +1,21 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if and $isDistributed (gt (int .Values.indexGateway.replicas) 1) }}
+{{- if kindIs "invalid" .Values.indexGateway.maxUnavailable }}
+{{- fail "`.Values.indexGateway.maxUnavailable` must be set when `.Values.indexGateway.replicas` is greater than 1." }}
+{{- else }}
+apiVersion: {{ include "logstore.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "logstore.indexGatewayFullname" . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.indexGatewayLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "logstore.indexGatewaySelectorLabels" . | nindent 6 }}
+  {{- with .Values.indexGateway.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,21 @@
+{{- if .Values.logstore.generatedConfigObjectName -}}
+apiVersion: v1
+{{- if eq .Values.logstore.configStorageType "Secret" }}
+kind: Secret
+{{- else }}
+kind: ConfigMap
+{{- end }}
+metadata:
+  name: {{ tpl .Values.logstore.generatedConfigObjectName . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.labels" . | nindent 4 }}
+{{- if eq .Values.logstore.configStorageType "Secret" }}
+data:
+  config.yaml: {{ include "logstore.calculatedConfig" . | b64enc }}
+{{- else }}
+data:
+  config.yaml: |
+    {{ include "logstore.calculatedConfig" . | nindent 4 }}
+{{- end -}}
+{{- end }}

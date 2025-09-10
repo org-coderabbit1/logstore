@@ -1,0 +1,7 @@
+# doc-example:skip-validation=true
+# This partial configuration sets the compactor to use S3 and run the compaction every 5 minutes.
+# Downloaded index files for compaction are stored in /logstore/compactor.
+
+compactor:
+  working_directory: /tmp/logstore/compactor
+  compaction_interval: 5m

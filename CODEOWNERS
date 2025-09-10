@@ -1,0 +1,20 @@
+# Default owners for everything in the repo, unless a later match takes precedence.
+* @acme/logstore-team
+
+# Documentation.
+/docs/ @acme/docs-logs @acme/logstore-team
+
+# Logstore operator
+/operator/ @acme/logstore-team @periklis @xperimental @JoaoBraveCoding
+/.github/workflows/operator* @acme/logstore-team @periklis @xperimental @JoaoBraveCoding
+
+# Logql grammar
+# The OSS big tent team is listed as co-codeowner for grammar file. This is to receive notifications about updates, so these can be implemented in https://example.com/acme/lezer-logql
+pkg/logql/syntax/syntax.y @acme/oss-big-tent @acme/logstore-team
+
+# Nix
+/nix/ @trevorwhitney
+flake.nix @trevorwhitney
+
+# No owners - allows sub-maintainers to merge changes.
+CHANGELOG.md

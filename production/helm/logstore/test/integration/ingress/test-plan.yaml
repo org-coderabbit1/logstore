@@ -1,0 +1,24 @@
+---
+apiVersion: helm-chart-toolbox.acme.com/v1
+kind: TestPlan
+name: ingress
+subject:
+  releaseName: logstore
+  namespace: logstore
+  path: ../../..
+  valuesFile: ingress-values.yaml
+  extraArgs:
+    - --dependency-update
+    - --set
+    - "chunksCache.allocatedMemory=1024"
+
+cluster:
+  type: kind
+
+tests:
+  - type: kubernetes-objects-test
+    values:
+      checks:
+        - kind: Ingress
+          name: logstore-gateway
+          namespace: logstore

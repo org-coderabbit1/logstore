@@ -1,0 +1,30 @@
+{{- with .Values.monitoring.dashboards }}
+{{- if .enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logstore.dashboardsName" $ }}-1
+  namespace: {{ .namespace | default (include "logstore.namespace" $) }}
+  labels:
+    {{- include "logstore.labels" $ | nindent 4 }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  "logstore-chunks.json": |
+    {{ $.Files.Get "src/dashboards/logstore-chunks.json" | fromJson | toJson }}
+  "logstore-deletion.json": |
+    {{ $.Files.Get "src/dashboards/logstore-deletion.json" | fromJson | toJson }}
+  "logstore-logs.json": |
+    {{ $.Files.Get "src/dashboards/logstore-logs.json" | fromJson | toJson }}
+  "logstore-mixin-recording-rules.json": |
+    {{ $.Files.Get "src/dashboards/logstore-mixin-recording-rules.json" | fromJson | toJson }}
+  "logstore-operational.json": |
+    {{ $.Files.Get "src/dashboards/logstore-operational.json" | fromJson | toJson }}
+{{- end -}}
+{{- end -}}

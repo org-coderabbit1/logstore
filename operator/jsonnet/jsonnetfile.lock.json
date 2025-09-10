@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/grafonnet-lib.git",
+          "subdir": "grafonnet"
+        }
+      },
+      "version": "a1d61cce1da59c71409b99b5c7568511fec661ea",
+      "sum": "342u++/7rViR/zj2jeJOjshzglkZ1SY+hFNuyCBFMdc="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/jsonnet-libs.git",
+          "subdir": "acme-builder"
+        }
+      },
+      "version": "a0c465d0ad8f65bd6e877278db14f9dd94c2d2c3",
+      "sum": "G7B6E5sqWirDbMWRhifbLRfGgRFbIh9WCYa6X3kMh6g="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/jsonnet-libs.git",
+          "subdir": "mixin-utils"
+        }
+      },
+      "version": "a0c465d0ad8f65bd6e877278db14f9dd94c2d2c3",
+      "sum": "VAik6Sh5MD5H1Km1gSIXG4rwQ4m4zyw7odP5TKu3bGo="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/logstore.git",
+          "subdir": "production/logstore-mixin"
+        }
+      },
+      "version": "ce8d70506c5bd905dd7ec7db8f174b9fcd264f30",
+      "sum": "1J1lnLL4+TE+/rD5OTGUEhK8Kmn3Fm+qE/L1oLeN5e8="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://example.com/acme/metricstore.git",
+          "subdir": "operations/metricstore-mixin"
+        }
+      },
+      "version": "2e7b5091e6557d1f95651b7ffdd54c1adaaba623",
+      "sum": "8zv1E+3NEc7idSxZbV8+CLtgfmfchfAfHOBgraEHLFc="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/prometheus-operator/kube-prometheus.git",
+          "subdir": "jsonnet/kube-prometheus/lib"
+        }
+      },
+      "version": "c79b82818a207c85de6c7efb7eabb8529f23fc25",
+      "sum": "QKRgrgEZ3k9nLmLCrDBaeIGVqQZf+AvZTcnhdLk3TrA="
+    }
+  ],
+  "legacyImports": false
+}

@@ -1,0 +1,10 @@
+apiVersion: logstore.acme.com/v1
+kind: LogstoreStack
+metadata:
+  name: logstorestack-sample
+spec:
+  size: 1x.small
+  storage:
+    secret:
+      name: test
+  storageClassName: standard

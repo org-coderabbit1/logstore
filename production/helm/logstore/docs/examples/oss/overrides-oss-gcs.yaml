@@ -1,0 +1,77 @@
+enterprise:
+  enabled: false
+  adminApi:
+    enabled: false
+  useExternalLicense: false
+
+  config: |
+    admin_client:
+      storage:
+        gcs:
+          bucket_name: {YOUR_GCS_BUCKET}
+    auth:
+      type: trust
+    auth_enabled: false
+    cluster_name: logstore-logs
+
+logstore:
+  auth_enabled: false
+
+  commonConfig:
+    path_prefix: /var/logstore
+    replication_factor: 3
+
+  storage:
+    type: gcs
+    bucketNames:
+      chunks: {YOUR_GCS_BUCKET}
+      ruler: {YOUR_GCS_BUCKET}
+      admin: {YOUR_GCS_BUCKET}
+
+minio:
+  enabled: false
+
+write:
+  extraEnv:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: "/etc/logstore_secrets/gcp_service_account.json"
+  extraVolumeMounts:
+    - name: logstore-secrets
+      mountPath: "/etc/logstore_secrets"
+  extraVolumes:
+    - name: logstore-secrets
+      secret:
+        secretName: logstore-secrets
+        items:
+        - key: gcp_service_account.json
+          path: gcp_service_account.json
+
+read:
+  extraEnv:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: "/etc/logstore_secrets/gcp_service_account.json"
+  extraVolumeMounts:
+    - name: logstore-secrets
+      mountPath: "/etc/logstore_secrets"
+  extraVolumes:
+    - name: logstore-secrets
+      secret:
+        secretName: logstore-secrets
+        items:
+        - key: gcp_service_account.json
+          path: gcp_service_account.json
+
+gateway:
+  extraEnv:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: "/etc/logstore_secrets/gcp_service_account.json"
+  extraVolumeMounts:
+    - name: logstore-secrets
+      mountPath: "/etc/logstore_secrets"
+  extraVolumes:
+    - name: logstore-secrets
+      secret:
+        secretName: logstore-secrets
+        items:
+        - key: gcp_service_account.json
+          path: gcp_service_account.json

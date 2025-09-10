@@ -1,0 +1,19 @@
+package datatype
+
+import (
+	"github.com/apache/arrow-go/v18/arrow"
+
+	"example.com/acme/logstore/v3/pkg/engine/internal/types"
+)
+
+var (
+	ColumnMetadataBuiltinMessage   = ColumnMetadata(types.ColumnTypeBuiltin, Logstore.String)
+	ColumnMetadataBuiltinTimestamp = ColumnMetadata(types.ColumnTypeBuiltin, Logstore.Timestamp)
+)
+
+func ColumnMetadata(ct types.ColumnType, dt DataType) arrow.Metadata {
+	return arrow.NewMetadata(
+		[]string{types.MetadataKeyColumnType, types.MetadataKeyColumnDataType},
+		[]string{ct.String(), dt.String()},
+	)
+}

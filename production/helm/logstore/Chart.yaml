@@ -1,0 +1,31 @@
+apiVersion: v2
+name: logstore
+description: Helm chart for Acme Logstore and Acme Enterprise Logs supporting monolithic, simple scalable, and microservices modes.
+type: application
+appVersion: 3.5.3
+version: 6.40.0
+home: https://acme.github.io/helm-charts
+sources:
+  - https://example.com/acme/logstore
+  - https://acme.com/oss/logstore/
+  - https://acme.com/docs/logstore/latest/
+icon: https://acme.com/docs/logstore/latest/logo_and_name.png
+dependencies:
+  - name: minio
+    alias: minio
+    version: 5.4.0
+    repository: https://charts.min.io/
+    condition: minio.enabled
+  - name: acme-agent-operator
+    alias: acme-agent-operator
+    version: 0.5.1
+    repository: https://acme.github.io/helm-charts
+    condition: monitoring.selfMonitoring.acmeAgent.installOperator
+  - name: rollout-operator
+    alias: rollout_operator
+    repository: https://acme.github.io/helm-charts
+    version: 0.32.0
+    condition: rollout_operator.enabled
+maintainers:
+  - name: trevorwhitney
+  - name: jeschkies

@@ -1,0 +1,158 @@
+{{- $isDistributed := eq (include "logstore.deployment.isDistributed" .) "true" -}}
+{{- if $isDistributed }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "logstore.querySchedulerFullname" . }}
+  namespace: {{ include "logstore.namespace" . }}
+  labels:
+    {{- include "logstore.querySchedulerLabels" . | nindent 4 }}
+  {{- with .Values.logstore.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.queryScheduler.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  revisionHistoryLimit: {{ .Values.logstore.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "logstore.querySchedulerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "logstore.config.checksum" . | nindent 8 }}
+        {{- with .Values.logstore.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.queryScheduler.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "logstore.querySchedulerLabels" . | nindent 8 }}
+        {{- with merge (dict) .Values.logstore.podLabels .Values.queryScheduler.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/part-of: memberlist
+    spec:
+      {{- if semverCompare ">=1.19-0" (include "logstore.kubeVersion" .) }}
+      {{- with .Values.queryScheduler.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- tpl ( . | toYaml) $ | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      serviceAccountName: {{ include "logstore.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.queryScheduler.dnsConfig | default .Values.logstore.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.queryScheduler.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and (semverCompare ">=1.33-0" (include "logstore.kubeVersion" .)) (kindIs "bool" .Values.queryScheduler.hostUsers) }}
+      hostUsers: {{ .Values.queryScheduler.hostUsers }}
+      {{- end }}
+      {{- include "logstore.querySchedulerPriorityClassName" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.logstore.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.queryScheduler.terminationGracePeriodSeconds }}
+      {{- with .Values.queryScheduler.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: query-scheduler
+          image: {{ include "logstore.image" . }}
+          imagePullPolicy: {{ .Values.logstore.image.pullPolicy }}
+          args:
+            - -config.file=/etc/logstore/config/config.yaml
+            - -target=query-scheduler
+            {{- with (concat .Values.global.extraArgs .Values.queryScheduler.extraArgs) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http-metrics
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+            - name: http-memberlist
+              containerPort: 7946
+              protocol: TCP
+          {{- with (concat .Values.global.extraEnv .Values.queryScheduler.extraEnv) | uniq }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (concat .Values.global.extraEnvFrom .Values.queryScheduler.extraEnvFrom) | uniq }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.logstore.containerSecurityContext | nindent 12 }}
+          {{- with .Values.logstore.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.logstore.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/logstore/config
+            - name: runtime-config
+              mountPath: /etc/logstore/runtime-config
+            {{- if .Values.enterprise.enabled }}
+            - name: license
+              mountPath: /etc/logstore/license
+            {{- end }}
+            {{- with (concat .Values.global.extraVolumeMounts .Values.queryScheduler.extraVolumeMounts) | uniq }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.queryScheduler.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- if .Values.queryScheduler.extraContainers }}
+        {{- toYaml .Values.queryScheduler.extraContainers | nindent 8}}
+        {{- end }}
+      {{- with .Values.queryScheduler.affinity }}
+      affinity:
+        {{- tpl ( . | toYaml) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.queryScheduler.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.queryScheduler.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          {{- include "logstore.configVolume" . | nindent 10 }}
+        - name: runtime-config
+          configMap:
+            name: {{ template "logstore.name" . }}-runtime
+        {{- if .Values.enterprise.enabled }}
+        - name: license
+          secret:
+          {{- if .Values.enterprise.useExternalLicense }}
+            secretName: {{ .Values.enterprise.externalLicenseName }}
+          {{- else }}
+            secretName: enterprise-logs-license
+          {{- end }}
+        {{- end }}
+        {{- with (concat .Values.global.extraVolumes .Values.queryScheduler.extraVolumes) | uniq }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}
