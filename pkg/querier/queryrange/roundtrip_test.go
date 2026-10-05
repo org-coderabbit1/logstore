@@ -29,6 +29,7 @@ import (
 	"example.com/acme/logstore/pkg/storage/config"
 	util_log "example.com/acme/logstore/pkg/util/log"
 	"example.com/acme/logstore/pkg/util/marshal"
+	"example.com/acme/logstore/pkg/util/validation"
 )
 
 var (
@@ -622,6 +623,10 @@ func (f fakeLimits) MinShardingLookback(string) time.Duration {
 
 func (f fakeLimits) QueryTimeout(string) time.Duration {
 	return f.queryTimeout
+}
+
+func (f fakeLimits) BlockedQueries(string) []*validation.BlockedQuery {
+	return []*validation.BlockedQuery{}
 }
 
 func counter() (*int, http.Handler) {
