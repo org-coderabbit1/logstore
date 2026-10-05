@@ -25,6 +25,7 @@ import (
 	"example.com/acme/logstore/pkg/storage/stores/indexshipper/compactor/deletionmode"
 	"example.com/acme/logstore/pkg/util/flagext"
 	util_log "example.com/acme/logstore/pkg/util/log"
+	"example.com/acme/logstore/pkg/util/validation"
 )
 
 const (
@@ -155,6 +156,8 @@ type Limits struct {
 	CompactorDeletionEnabled bool `yaml:"allow_deletes" json:"allow_deletes"`
 
 	ShardStreams *shardstreams.Config `yaml:"shard_streams" json:"shard_streams"`
+
+	BlockedQueries []*validation.BlockedQuery `yaml:"blocked_queries,omitempty" json:"blocked_queries,omitempty"`
 }
 
 type StreamRetention struct {
@@ -632,6 +635,10 @@ func (o *Overrides) DeletionMode(userID string) string {
 
 func (o *Overrides) ShardStreams(userID string) *shardstreams.Config {
 	return o.getOverridesForUser(userID).ShardStreams
+}
+
+func (o *Overrides) BlockedQueries(userID string) []*validation.BlockedQuery {
+	return o.getOverridesForUser(userID).BlockedQueries
 }
 
 func (o *Overrides) DefaultLimits() *Limits {
