@@ -12,7 +12,6 @@ import (
 
 	"example.com/acme/logstore/integration/client"
 	"example.com/acme/logstore/integration/cluster"
-
 	"example.com/acme/logstore/pkg/storage"
 )
 
