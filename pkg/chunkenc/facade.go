@@ -4,8 +4,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/prometheus/common/model"
-
 	"example.com/acme/logstore/v3/pkg/storage/chunk"
 	"example.com/acme/logstore/v3/pkg/util/filter"
 )
@@ -108,8 +106,8 @@ func (f Facade) LogstoreChunk() Chunk {
 	return f.c
 }
 
-func (f Facade) Rebound(start, end model.Time, filter filter.Func) (chunk.Data, error) {
-	newChunk, err := f.c.Rebound(start.Time(), end.Time(), filter)
+func (f Facade) Rewrite(filter filter.Func) (chunk.Data, error) {
+	newChunk, err := f.c.Rewrite(filter)
 	if err != nil {
 		return nil, err
 	}
